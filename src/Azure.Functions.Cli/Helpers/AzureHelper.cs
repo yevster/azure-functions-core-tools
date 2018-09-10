@@ -175,6 +175,7 @@ namespace Azure.Functions.Cli.Helpers
             site.Location = armSite.location;
             site.Kind = armSite.kind;
             site.Sku = armSite.properties.sku;
+            site.SiteName = armSite.name;
             return site;
         }
 
@@ -209,6 +210,31 @@ namespace Azure.Functions.Cli.Helpers
                 return string.IsNullOrEmpty(errorMessage)
                     ? new HttpResult<Dictionary<string, string>, string>(null, result)
                     : new HttpResult<Dictionary<string, string>, string>(null, errorMessage);
+            }
+        }
+
+        public static async Task PrintFunctionsInfo(Site functionApp, string accessToken)
+        {
+            var functions = await AzureHelper.GetFunctions(functionApp, accessToken);
+            {
+
+                ColoredConsole.WriteLine(TitleColor($"Functions in {functionApp.SiteName}:"));
+                foreach (var function in functions)
+                {
+                    var trigger = function
+                        .Config?["bindings"]
+                        ?.FirstOrDefault(o => o["type"]?.ToString().IndexOf("Trigger", StringComparison.OrdinalIgnoreCase) != -1)
+                        ?["type"];
+
+                    trigger = trigger ?? "No Trigger Found";
+
+                    ColoredConsole.WriteLine($"    {function.Name} - [{VerboseColor(trigger.ToString())}]");
+                    if (!string.IsNullOrEmpty(function.InvokeUrlTemplate))
+                    {
+                        ColoredConsole.WriteLine($"        Invoke url: {VerboseColor(function.InvokeUrlTemplate)}");
+                    }
+                    ColoredConsole.WriteLine();
+                }
             }
         }
     }
